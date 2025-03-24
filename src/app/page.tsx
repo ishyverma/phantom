@@ -1,103 +1,278 @@
-import Image from "next/image";
+"use client";
+
+import MnemonicCard from "@/components/main/mnemonic-card";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { createMnemonic } from "@/lib/create-mnemonic";
+import { createSeed } from "@/lib/create-seed";
+import { createWallet } from "@/lib/create-wallet";
+import { Eye, EyeOff, Trash } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { toast } from "sonner";
+
+type onBordingType = "mnemonic" | "walletType" | "wallets";
+type walletProps = "ETH" | "SOL";
+
+interface keyType {
+  id: number;
+  publicKey: string;
+  privateKey: string;
+  canSee: boolean;
+}
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [currentPath, setCurrentPath] = useState<onBordingType | null>();
+  const [_, setWalletType] = useState<walletProps | "">("");
+  const [mnemonics, setMnemonics] = useState<string[]>([]);
+  const [isAcceptedTerm, setIsAcceptedTerms] = useState(false);
+  const [keys, setKeys] = useState<keyType[] | []>([]);
+  const count = useRef<number>(1)
+  const [blockchain, setBlockchain] = useState("");
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  useEffect(() => {
+    const number = localStorage.getItem("accountNumber")
+    if (!number) {
+      localStorage.setItem("accountNumber", "1")
+      count.current = 1
+    } else {
+      count.current = Number(number)
+    }
+  })
+
+  useEffect(() => {
+    const mnemonic = localStorage.getItem("mnemonic");
+    const mnemo = createMnemonic();
+    if (!mnemonic) {
+      localStorage.setItem("mnemonic", mnemo.join(" "));
+      setMnemonics(mnemo);
+    } else {
+      setMnemonics(mnemonic.split(" "));
+    }
+  }, []);
+
+  const createMoreWallet = (blockchain: string, mnemonic: string) => {
+    const seed = createSeed(mnemonic);
+    count.current += 1;
+    localStorage.setItem("accountNumber", String(count.current));
+    const { publicKey: pubKey, privateKey: privKey } = createWallet(
+      seed,
+      blockchain,
+      count.current.toString()
+    );
+    localStorage.setItem(
+      "keys",
+      JSON.stringify([
+        ...keys,
+        {
+          id: count.current,
+          publicKey: pubKey,
+          privateKey: privKey,
+          canSee: false,
+        },
+      ])
+    );
+    setKeys((prev) => [
+      ...prev,
+      {
+        id: count.current,
+        publicKey: pubKey,
+        privateKey: privKey,
+        canSee: false,
+      },
+    ]);
+  };
+
+  useEffect(() => {
+    const path = localStorage.getItem("currentPath") as onBordingType;
+    if (!path) {
+      setCurrentPath("walletType");
+      localStorage.setItem("currentPath", "walletType");
+    }
+    if (path) setCurrentPath(path);
+  }, []);
+
+  useEffect(() => {
+    const keys = localStorage.getItem("keys");
+    const blockchain = localStorage.getItem("blockchain");
+    if (keys && blockchain) {
+      setKeys(JSON.parse(keys));
+      setBlockchain(blockchain === "SOL" ? "Solana" : "Etherium");
+    }
+  }, []);
+
+  return (
+    <div className="font-bold tracking-tight">
+      {currentPath === "mnemonic" && (
+        <div>
+          <div className="text-5xl">Secret Recovery Phase</div>
+          <div className="text-xl mt-2 text-zinc-400">
+            Save this word in a safe place.
+          </div>
+          <MnemonicCard mnemonics={mnemonics} />
+          <div className="flex gap-2 items-center mt-6">
+            <Checkbox
+              id="terms"
+              onClick={() => setIsAcceptedTerms((prev) => !prev)}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <label
+              htmlFor="terms"
+              className="text-lg font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              I saved my secret recovery phase
+            </label>
+          </div>
+          <Button
+            onClick={() => {
+              localStorage.setItem("currentPath", "wallets");
+              setCurrentPath("wallets");
+              const mnemonic = localStorage.getItem("mnemonic") as string;
+              const seed = createSeed(mnemonic);
+              const walletType = localStorage.getItem("blockchain") as string;
+              const { publicKey, privateKey } = createWallet(
+                seed,
+                walletType,
+                count.current.toString()
+              );
+              localStorage.setItem(
+                `keys`,
+                JSON.stringify([
+                  {
+                    id: 1,
+                    publicKey,
+                    privateKey,
+                    canSee: false,
+                  },
+                ])
+              );
+              setKeys([
+                {
+                  id: 1,
+                  publicKey,
+                  privateKey,
+                  canSee: false,
+                },
+              ]);
+            }}
+            className="mt-4"
+            disabled={isAcceptedTerm === false}
           >
-            Read our docs
-          </a>
+            Next
+          </Button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      )}
+
+      {currentPath === "walletType" && (
+        <>
+          <div className="text-5xl">Choose a Blockchain to get started</div>
+          <div className="flex items-center gap-2 mt-4">
+            <Button
+              onClick={() => {
+                localStorage.setItem("currentPath", "mnemonic");
+                localStorage.setItem("blockchain", "SOL");
+                setBlockchain("Solana");
+                setCurrentPath("mnemonic");
+                setWalletType("SOL");
+              }}
+            >
+              Solana
+            </Button>
+            <Button
+              onClick={() => {
+                localStorage.setItem("currentPath", "mnemonic");
+                localStorage.setItem("blockchain", "ETH");
+                setBlockchain("Etherium");
+                setCurrentPath("mnemonic");
+                setWalletType("ETH");
+              }}
+            >
+              Ethereum
+            </Button>
+          </div>
+        </>
+      )}
+
+      {currentPath === "wallets" && (
+        <div>
+          <div className="flex items-center justify-between">
+            <div className="text-5xl tracking-tight font-sans">
+              {blockchain} Wallet
+            </div>
+            <div className="space-x-2">
+              <Button
+                onClick={() => {
+                  {
+                    blockchain === "Solana"
+                      ? createMoreWallet("SOL", mnemonics.join(" "))
+                      : createMoreWallet("ETH", mnemonics.join(" "));
+                  }
+                }}
+              >
+                Add Wallet
+              </Button>
+              <Button variant="destructive">Clear Wallets</Button>
+            </div>
+          </div>
+          <div className="mt-4 border rounded">
+            {keys.map((key) => (
+              <div key={key.id}>
+                <div className="flex justify-between items-center py-5 px-8">
+                  <div className="text-3xl tracking-tight font-sans">
+                    Wallet {key.id}
+                  </div>
+                  <div className="text-destructive hover:bg-[#262626] py-3 px-4 rounded cursor-pointer transition-all">
+                    <Trash className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="rounded-t-xl bg-[#181818] px-8 py-3">
+                  <div className="text-xl tracking-tight">Public Key</div>
+                  <div
+                    onClick={() => {
+                      navigator.clipboard.writeText(key.publicKey);
+                      toast.success("Copied to clipboard");
+                    }}
+                    className="text-[#CDCDCD] font-medium mt-2 cursor-pointer hover:text-white transition-all"
+                  >
+                    {key.publicKey}
+                  </div>
+                  <div className="text-xl tracking-tight mt-8">Private Key</div>
+                  <div className="flex items-center justify-between">
+                    <div
+                      onClick={() => {
+                        navigator.clipboard.writeText(key.privateKey);
+                        toast.success("Copied to clipboard");
+                      }}
+                      className="text-[#CDCDCD] font-medium mt-2 cursor-pointer hover:text-white transition-all line-clamp-1"
+                    >
+                      {key.canSee
+                        ? key.privateKey
+                        : " • ".repeat(key.privateKey.length)}
+                    </div>
+                    <div
+                      onClick={() => {
+                        setKeys((prev) =>
+                          prev
+                            .filter((k) => k.id === key.id)
+                            .map((k) => ({
+                              ...k,
+                              canSee: !k.canSee,
+                            }))
+                        );
+                      }}
+                      className="hover:bg-[#262626] py-3 px-4 rounded cursor-pointer transition-all"
+                    >
+                      {key.canSee ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
