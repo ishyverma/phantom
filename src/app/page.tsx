@@ -7,8 +7,18 @@ import { createMnemonic } from "@/lib/create-mnemonic";
 import { createSeed } from "@/lib/create-seed";
 import { createWallet } from "@/lib/create-wallet";
 import { Eye, EyeOff, Trash } from "lucide-react";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 type onBordingType = "mnemonic" | "walletType" | "wallets";
 type walletProps = "ETH" | "SOL";
@@ -26,18 +36,18 @@ export default function Home() {
   const [mnemonics, setMnemonics] = useState<string[]>([]);
   const [isAcceptedTerm, setIsAcceptedTerms] = useState(false);
   const [keys, setKeys] = useState<keyType[] | []>([]);
-  const count = useRef<number>(1)
+  const count = useRef<number>(1);
   const [blockchain, setBlockchain] = useState("");
 
   useEffect(() => {
-    const number = localStorage.getItem("accountNumber")
+    const number = localStorage.getItem("accountNumber");
     if (!number) {
-      localStorage.setItem("accountNumber", "1")
-      count.current = 1
+      localStorage.setItem("accountNumber", "1");
+      count.current = 1;
     } else {
-      count.current = Number(number)
+      count.current = Number(number);
     }
-  })
+  });
 
   useEffect(() => {
     const mnemonic = localStorage.getItem("mnemonic");
@@ -163,7 +173,9 @@ export default function Home() {
 
       {currentPath === "walletType" && (
         <>
-          <div className="text-5xl">Choose a Blockchain to get started</div>
+          <div className="lg:text-5xl text-3xl">
+            Choose a Blockchain to get started
+          </div>
           <div className="flex items-center gap-2 mt-4">
             <Button
               onClick={() => {
@@ -193,11 +205,11 @@ export default function Home() {
 
       {currentPath === "wallets" && (
         <div>
-          <div className="flex items-center justify-between">
-            <div className="text-5xl tracking-tight font-sans">
+          <div className="flex flex-col lg:flex-row items-start lg:items-between justify-between">
+            <div className="text-4xl lg:text-5xl tracking-tight font-sans">
               {blockchain} Wallet
             </div>
-            <div className="space-x-2">
+            <div className="space-x-2 lg:mt-0 mt-4 lg:self-center">
               <Button
                 onClick={() => {
                   {
@@ -209,28 +221,89 @@ export default function Home() {
               >
                 Add Wallet
               </Button>
-              <Button variant="destructive">Clear Wallets</Button>
+              <Dialog>
+                <DialogTrigger>
+                  <Button
+                    variant="destructive"
+                  >
+                    Clear Wallets
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>
+                      Are you sure you want to delete all wallets?
+                    </DialogTitle>
+                    <DialogDescription>
+                      This action cannot be undone. This will permanently delete
+                      your wallets and keys from local storage.
+                    </DialogDescription>
+                    <div className="mt-2 flex items-center gap-2 justify-end">
+                      <DialogClose>
+                        <Button variant="secondary">Close</Button>
+                      </DialogClose>
+                      <Button onClick={() => {
+                      localStorage.setItem("accountNumber", "1");
+                      count.current = 1;
+                      localStorage.setItem("currentPath", "walletType");
+                      setCurrentPath("walletType");
+                      setIsAcceptedTerms(false);
+                    }} className="">Delete</Button>
+                    </div>
+                  </DialogHeader>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
-          <div className="mt-4 border rounded">
+          <div className="mt-4 space-y-4">
             {keys.map((key) => (
-              <div key={key.id}>
-                <div className="flex justify-between items-center py-5 px-8">
+              <div key={key.id} className="border rounded-lg">
+                <div className="flex justify-between items-center py-5 px-8 rounded-lg">
                   <div className="text-3xl tracking-tight font-sans">
                     Wallet {key.id}
                   </div>
-                  <div className="text-destructive hover:bg-[#262626] py-3 px-4 rounded cursor-pointer transition-all">
-                    <Trash className="w-4 h-4" />
-                  </div>
+                  <Dialog>
+                    <DialogTrigger>
+                      <div className="text-destructive dark:hover:bg-[#262626] hover:bg-[#F5F5F5] py-3 px-4 rounded cursor-pointer transition-all">
+                        <Trash className="w-4 h-4" />
+                      </div>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader>
+                        <DialogTitle>
+                          Are you sure you want to delete this wallet?
+                        </DialogTitle>
+                        <DialogDescription>
+                          This action cannot be undone. This will permanently
+                          delete your wallets and keys from local storage.
+                        </DialogDescription>
+                        <div className="mt-2 flex items-center gap-2 justify-end">
+                          <DialogClose>
+                            <Button variant="secondary">Close</Button>
+                          </DialogClose>
+                          <Button
+                            onClick={() => {
+                              setKeys((prev) =>
+                                prev.filter((k) => k.id !== key.id)
+                              );
+                            }}
+                            className=""
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </DialogHeader>
+                    </DialogContent>
+                  </Dialog>
                 </div>
-                <div className="rounded-t-xl bg-[#181818] px-8 py-3">
+                <div className="rounded-t-xl dark:bg-[#181818] bg-[#FAFAFA] px-8 py-3">
                   <div className="text-xl tracking-tight">Public Key</div>
                   <div
                     onClick={() => {
                       navigator.clipboard.writeText(key.publicKey);
                       toast.success("Copied to clipboard");
                     }}
-                    className="text-[#CDCDCD] font-medium mt-2 cursor-pointer hover:text-white transition-all"
+                    className="dark:text-[#CDCDCD] text-neutral-700 font-medium mt-2 cursor-pointer dark:hover:text-white hover:text-black transition-all line-clamp-1"
                   >
                     {key.publicKey}
                   </div>
@@ -241,7 +314,7 @@ export default function Home() {
                         navigator.clipboard.writeText(key.privateKey);
                         toast.success("Copied to clipboard");
                       }}
-                      className="text-[#CDCDCD] font-medium mt-2 cursor-pointer hover:text-white transition-all line-clamp-1"
+                      className="dark:text-[#CDCDCD] text-neutral-700 font-medium mt-2 cursor-pointer dark:hover:text-white hover:text-black transition-all line-clamp-1"
                     >
                       {key.canSee
                         ? key.privateKey
@@ -250,15 +323,24 @@ export default function Home() {
                     <div
                       onClick={() => {
                         setKeys((prev) =>
-                          prev
-                            .filter((k) => k.id === key.id)
-                            .map((k) => ({
-                              ...k,
-                              canSee: !k.canSee,
-                            }))
+                          prev.map((k) =>
+                            k.id === key.id
+                              ? {
+                                  id: k.id,
+                                  privateKey: k.privateKey,
+                                  publicKey: k.publicKey,
+                                  canSee: !k.canSee,
+                                }
+                              : {
+                                  id: k.id,
+                                  privateKey: k.privateKey,
+                                  publicKey: k.publicKey,
+                                  canSee: k.canSee,
+                                }
+                          )
                         );
                       }}
-                      className="hover:bg-[#262626] py-3 px-4 rounded cursor-pointer transition-all"
+                      className="dark:hover:bg-[#262626] hover:bg-[#F5F5F5] py-3 px-4 rounded cursor-pointer transition-all"
                     >
                       {key.canSee ? (
                         <EyeOff className="w-4 h-4" />

@@ -37,7 +37,7 @@ export default function RootLayout({
           storageKey="theme"
         >
           <Header />
-          <main className="font-sans px-20 mt-16">
+          <main className="font-sans lg:px-20 px-5 mt-16">
             {children}
           </main>
           <Toaster />
