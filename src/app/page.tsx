@@ -32,7 +32,7 @@ interface keyType {
 
 export default function Home() {
   const [currentPath, setCurrentPath] = useState<onBordingType | null>();
-  const [_, setWalletType] = useState<walletProps | "">("");
+  const [walletType, setWalletType] = useState<walletProps | "">("");
   const [mnemonics, setMnemonics] = useState<string[]>([]);
   const [isAcceptedTerm, setIsAcceptedTerms] = useState(false);
   const [keys, setKeys] = useState<keyType[] | []>([]);
@@ -358,3 +358,5 @@ export default function Home() {
     </div>
   );
 }
+
+export const dynamic = 'force-dynamic';
